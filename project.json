@@ -1,0 +1,24 @@
+{
+    "project_type": "javascript",
+
+    "debugMode" : 1,
+    "showFPS" : true,
+    "frameRate" : 60,
+    "id" : "gameCanvas",
+    "renderMode" : 0,
+    "noCache": true,
+    "engineDir":"cocos2d-html5",
+
+    "modules" : ["cocos2d", "spine", "ccui"],
+
+    "jsList" : [
+        "src/resources.js",
+        "src/gamescene.js",
+        "src/game.js",
+        "src/gamescene.js",
+        "src/letter.js",
+        "src/letterview.js",
+        "src/wordview.js",
+        "src/transcript_rus.js"
+    ]
+}
