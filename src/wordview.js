@@ -11,7 +11,8 @@ let NodeLetter = cc.Node.extend({
 
         this.active.animationBg.setVisible(false);
         this.active.animation.setVisible(false);
-
+        
+        this.isOpen = false
 
         this.addChild(this.animationBg);
         this.addChild(this.active);
@@ -24,6 +25,7 @@ let NodeLetter = cc.Node.extend({
                 new cc.FadeTo(0.3, 255),
             )
         )
+        this.isOpen = true;
     }
 })
 
@@ -39,11 +41,30 @@ let WordView = cc.Node.extend({
     create: function() {
         let i = 0;
         for(let l of this.word.split('')) {
-            let nodeLetter = new NodeLetter(l)
+            let nodeLetter = new NodeLetter(l);
             this.arrayNodes.push(nodeLetter);
 
             this.addChild(nodeLetter);
         }
         
+    },
+
+    addLetter : function(letter) {
+        let nodeLetter = new NodeLetter(letter);
+        this.arrayNodes.push(nodeLetter);
+
+        this.addChild(nodeLetter);
+    },
+
+    allNodesIsVisible: function() {
+        let flag = true;
+        for (let node of this.arrayNodes) {
+            console.log(node, node.isOpen)
+            if (!node.isOpen) {
+                flag = false;
+                break;
+            }
+        }
+        return flag;
     }
 })

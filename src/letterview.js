@@ -9,7 +9,15 @@ let LetterView = cc.Node.extend({
 
         this.addChild(this.animation);
 
+        this.addActiveAnimation();
+
         this.active = false;
+
+        this.onMakeInactive = function() {
+        };
+
+        this.showGameButton = function() {
+        };
     },
 
     addLetterBg : function() {
@@ -20,30 +28,53 @@ let LetterView = cc.Node.extend({
         this.addChild(this.animationBg);
     },
 
-    onclick : function(choiseFunc) {
+    addActiveAnimation: function() {
+        this.activeAnimation = new cc.Sprite(cc.spriteFrameCache.getSpriteFrame('letter_bg_glow.png'));
+        this.activeAnimation.setVisible(false);
+        this.activeAnimation.runAction(new cc.FadeOut());
+        setTimeout(() => this.activeAnimation.setVisible(true), 100);
+        this.addChild(this.activeAnimation);
+    },
+
+    onclick : function(choiseFunc, removeFunc) {
         this.animationBg.addClickEventListener(function() {
             if (this.active) {
-                this.runAction(new cc.Spawn(
-                    new cc.ScaleTo(0.5, 0.7),
-                ));
+                this.makeInactive();
+                this.onMakeInactive();
+                removeFunc();
             }
             else {
-                this.runAction(new cc.Spawn(
-                    new cc.ScaleTo(0.5, 0.8),
-                ))
+                this.makeActive();
                 choiseFunc(this);
             }
-            this.active = !this.active;
+            this.showGameButton();
         }.bind(this));
 
     },
 
     makeInactive : function() {
-            if (this.active) {
-                this.runAction(new cc.Spawn(
-                    new cc.ScaleTo(0.5, 0.7),
-                ));
-                this.active = !this.active;
-            }
+        this.activeAnimation.runAction(
+            new cc.FadeTo(0.5, 0));
+
+        this.runAction(new cc.Spawn(
+            new cc.ScaleTo(0.5, 0.7),
+        ));
+        this.active = false;
     },
+
+    makeActive : function() {
+        this.activeAnimation.runAction(
+            new cc.FadeTo(0.5, 200));
+
+        this.runAction(new cc.Spawn(
+            new cc.ScaleTo(0.5, 0.8),
+        ));
+        this.active = true;
+    },
+
+    hideAction: function(speed) {
+        
+        this.animation.runAction(new cc.FadeTo(speed, 0));
+        this.animationBg.runAction(new cc.FadeTo(speed, 0));
+    }
 });

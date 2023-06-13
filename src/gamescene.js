@@ -5,6 +5,11 @@ let GameScene = cc.Scene.extend({
 
         this.centerViewLetters = {x : this.width/2, y : this.height/4.5};
 
+        this.viewLetters = [];
+        this.viewLettersPosition = [];
+
+        this.addShuffleButton();
+
         this.game = new Game();
         this.addViewLetters();
 
@@ -18,8 +23,14 @@ let GameScene = cc.Scene.extend({
 
         this.addAcceptButtonListener();
         this.addCancelButtonListener();
+        this.addHelpButtonListener();
 
         this.game.viewVictory = this.viewVictory.bind(this);
+        this.game.showChoiseLetters = this.showChoiseLetters.bind(this);
+        this.game.onChangeCoins = this.onChangeCoins.bind(this);
+        this.game.updateShowChoiseLetters = this.updateShowChoiseLetters.bind(this);
+
+        cc.audioEngine.playMusic(resources.game_music, true);
 
         // this.addLine();
 
@@ -36,6 +47,11 @@ let GameScene = cc.Scene.extend({
         //         }
         //     }.bind(this)
         // }, this);
+
+        this.addViewCoins();
+
+
+
     },
 
 
@@ -44,9 +60,10 @@ let GameScene = cc.Scene.extend({
         background.setScale(Math.max(this.width / background.width, this.height / background.height));
         background.setPosition(this.width / 2, this.height / 2);
         background.setLocalZOrder(-1);
-        this.addChild(background);
+        // this.addChild(background);
 
         this.gameBackground = new cc.Sprite(resources.game_background);
+        this.gameBackground.setScale(Math.max(this.width / this.gameBackground.width, this.height / this.gameBackground.height));
         this.gameBackground.setPosition(this.width / 2, this.height / 2);
         this.addChild(this.gameBackground);
     },
@@ -86,15 +103,77 @@ let GameScene = cc.Scene.extend({
     showWord: function(wordView) {
         let i = 1;
         for(let node of wordView.arrayNodes) {
-            setTimeout(() => {
-                node.showAnimation(node.active.animationBg);
-                node.showAnimation(node.active.animation);
-                setTimeout(() => node.active.runAction(new cc.ScaleTo(0.3, 0.6)), 300)
-                },
-            70 * i),
+            if (!node.isOpen) {
+                setTimeout(() => {
+                    node.showAnimation(node.active.animationBg);
+                    node.showAnimation(node.active.animation);
+                    setTimeout(() => node.active.runAction(new cc.ScaleTo(0.3, 0.6)), 300)
+                    },
+                70 * i)
+            }
             i += 1;
         }
     },
+
+    setShowChoiseLettersPosition(letter) {
+        let moveAnimation = function(letter, point) {
+            letter.runAction(new cc.MoveTo(0.2, point));
+        }
+
+        if (this.game.viewChoiseLetters.length == 0) {
+            letter.setPosition(this.width/2, this.height/2)
+            
+        }
+        else {
+            let letWidth = cc.spriteFrameCache.getSpriteFrame('letter_bg.png').getOriginalSize().width;
+            letWidth *= 0.5; //Делали Scale
+            let lastLetterPosition;
+            for (let letView of this.game.viewChoiseLetters) {
+                lastLetterPosition = letView.getPositionX() - letWidth/2;
+                moveAnimation(letView, cc.p(letView.getPositionX() - letWidth/2, letView.getPositionY()));
+            }
+
+            letter.setPosition(lastLetterPosition + letWidth, this.height/2);
+        }
+
+    },
+
+    showChoiseLetters: function(letter) {
+        console.log('game_' + this.game.choiseLetters.length + '_letter_effect');
+        letter.setScale(0);
+        let showAnimation = function(letter) {
+            letter.runAction(new cc.ScaleTo(0.4, 0.6));
+        }
+
+        this.setShowChoiseLettersPosition(letter);
+
+        this.game.viewChoiseLetters.push(letter);
+
+        this.addChild(letter);
+        showAnimation(letter);
+    },
+
+    updateShowChoiseLetters: function() {
+        let letWidth = cc.spriteFrameCache.getSpriteFrame('letter_bg.png').getOriginalSize().width;
+        letWidth *= 0.5;
+
+        let moveAnimation = function(letter, point) {
+            letter.runAction(new cc.MoveTo(0.2, point));
+        };
+
+        let length = this.game.viewChoiseLetters.length;
+        let i = Math.floor(length / 2) * -1;
+
+        let offset = 0;
+        if (length%2 == 0)
+            offset = letWidth/2;
+            
+        for (let letView of this.game.viewChoiseLetters) {
+            moveAnimation(letView, cc.p(this.width/2 + letWidth * i + offset, letView.getPositionY()));
+            i += 1;
+        }
+    },
+    
 
     // addLine: function() {
     //     let buttonSize = cc.spriteFrameCache.getSpriteFrame('line.png').getOriginalSize();
@@ -141,7 +220,46 @@ let GameScene = cc.Scene.extend({
         this.acceptButton = createButton(cc.p(this.width/2 + this.width/6, this.height/10), 'submit_icon.png');
 
         this.cancelButton = createButton(cc.p(this.width/2 - this.width/6, this.height/10), 'cancel_icon.png');
+
+        this.showGameButtons();
+
+        this.helpButton = createButton(cc.p(this.width - this.width/25, this.height/2.35)).button;
+        this.helpButton.setTitleText('Help!');
+        this.helpButton.setTitleFontName(resources.marvin_round.name);
+        this.helpButton.setTitleFontSize(50);
         
+    },
+
+    addHelpButtonListener: function() {
+        let button = this.helpButton;
+        button.addClickEventListener(function() {
+            if(this.game.haveCoins(50)) {
+                cc.audioEngine.playEffect(resources.game_help, false)
+                foundHelp:
+                for (let viewWord of this.viewWords) {
+                    if (this.game.foundWords.indexOf(viewWord.word) == -1) {
+                        for (let node of viewWord.arrayNodes) {
+                            if (!node.active.animationBg.isVisible()) {
+                                node.showAnimation(node.active.animationBg);
+                                node.showAnimation(node.active.animation);
+                                node.active.runAction(new cc.ScaleTo(0.3, 0.6));
+
+                                this.game.spendCoins(50);
+
+                                if (viewWord.allNodesIsVisible()) {
+                                    this.game.foundWords.push(viewWord.word);
+                                }
+                                break foundHelp;
+                            }
+                        }
+                    }
+                }
+            }
+            else {
+                cc.audioEngine.playEffect(resources.game_wrong_answer, false)
+            }
+
+        }.bind(this));
     },
 
     addAcceptButtonListener: function() {
@@ -151,37 +269,76 @@ let GameScene = cc.Scene.extend({
             for(let letView of this.game.choiseLetters) {
                 word += letView.letter;
             }
-            if (this.game.foundWords.indexOf(word) != -1) {
 
+            if (this.game.foundWords.indexOf(word) != -1) {
+                this.cancelChoiseLetters();
             }
             else if (this.game.words.indexOf(word) != -1) {
+                cc.audioEngine.playEffect(resources.game_right_answer, false)
+                this.answerAnimation('word_right.png');
                 this.showWord(this.mapViewWords.get(word));
                 this.game.foundWords.push(word);
-                this.game.isAllWordsFound();
+                setTimeout(() => {
+                    this.cancelChoiseLetters();
+                }, 500);
             }
-            this.cancelChoiseLetters();
+            else {
+                cc.audioEngine.playEffect(resources.game_wrong_answer, false)
+                this.answerAnimation('word_wrong.png');
+                setTimeout(() => {
+                    this.cancelChoiseLetters();
+                }, 500);
+            }
+            
+            this.hideGameButtons();
 
         }.bind(this));
     },
+
+
+    answerAnimation: function(spriteName) {
+        let answer = new cc.Sprite(cc.spriteFrameCache.getSpriteFrame(spriteName));
+        let width = cc.spriteFrameCache.getSpriteFrame('letter_bg.png').getOriginalSize().width;
+        width *= 0.6;
+
+        answer.setVisible(false);
+        answer.setScale(0);
+        let pos = this.game.viewChoiseLetters[this.game.viewChoiseLetters.length - 1].getPosition();
+
+        answer.setPosition(pos.x + width, pos.y);
+
+        this.addChild(answer);
+
+        answer.runAction(new cc.Sequence(
+            new cc.ToggleVisibility(),
+            new cc.ScaleTo(0.3, 0.6),
+            new cc.DelayTime.create(0.2),
+            new cc.Spawn(
+                new cc.ScaleTo(0.4, 1),
+                new cc.FadeOut(0.4)
+            ),
+            new cc.RemoveSelf()
+        ))
+    },
+
 
     addCancelButtonListener: function() {
         let button = this.cancelButton.button;
         button.addClickEventListener(function() {
             this.cancelChoiseLetters();
+            this.hideGameButtons();
         }.bind(this));
     },
 
     cancelChoiseLetters: function() {
-        while (this.game.choiseLetters.length > 0) {
-            let letView = this.game.choiseLetters.pop();
-            letView.makeInactive();
-        }
+        this.game.removeChoiseLetters();
+        this.game.removeShowChoiseLetters();
     },
 
     addBoard : function() {
         let board = new cc.Scale9Sprite('board_bg.png');
         board.setScale(1.013);
-        board.setContentSize(this.gameBackground.width, this.gameBackground.height / 3);
+        board.setContentSize(this.width, this.gameBackground.height / 3);
         board.setPosition(this.width / 2, this.height / 1.5);
         this.addChild(board);
     },
@@ -196,9 +353,84 @@ let GameScene = cc.Scene.extend({
             this.addChild(viewLet);
             i += 1;
 
+            viewLet.onMakeInactive = () => {
+                let index = this.game.choiseLetters.indexOf(viewLet);
+                while(this.game.choiseLetters.length > index) {
+                    let view = this.game.choiseLetters.pop();
+                    if (view != viewLet)
+                        view.makeInactive();
+                }
+            }
+
+            viewLet.showGameButton = this.showGameButtons.bind(this);
+
             viewLet.setScale(0.7);
-            viewLet.onclick(this.game.choiseLetter.bind(this.game));
+            viewLet.onclick(this.game.choiseLetter.bind(this.game), this.game.removeShowChoiseLetters.bind(this.game));
+
+            this.viewLetters.push(viewLet);
+            this.viewLettersPosition.push(viewLet.getPosition());
         }
+    },
+
+    hideGameButtons: function() {
+        this.acceptButton.button.setEnabled(false);
+
+        this.acceptButton.button.setVisible(false);
+        this.acceptButton.sprite.setVisible(false);
+
+        this.cancelButton.button.setEnabled(false)
+
+        this.cancelButton.button.setVisible(false);
+        this.cancelButton.sprite.setVisible(false);
+    },
+
+    showGameButtons: function() {
+        let predicate = !this.game.choiseLetters.length == 0;
+
+        this.acceptButton.button.setEnabled(predicate);
+
+        this.acceptButton.button.setVisible(predicate);
+        this.acceptButton.sprite.setVisible(predicate);
+
+        this.cancelButton.button.setEnabled(predicate)
+
+        this.cancelButton.button.setVisible(predicate);
+        this.cancelButton.sprite.setVisible(predicate);
+    },
+
+    shuffleViewLetters: function() {
+        function shuffle(array) { // Тасование Фишера — Йетса.
+            for (let i = array.length - 1; i > 0; i--) {
+                let j = Math.floor(Math.random() * (i + 1)); 
+                [array[i], array[j]] = [array[j], array[i]];
+            }
+        }
+        for (let i = 0; i < 5; i ++) {
+            setTimeout(() => {
+                shuffle(this.viewLettersPosition);
+                
+                for (let j = 0; j < this.viewLetters.length; j++) {
+                    this.viewLetters[j].runAction(new cc.MoveTo(0.15, this.viewLettersPosition[j]));
+                }
+            }, 180 * i);
+        }
+    },
+
+    addShuffleButton: function() {
+        let button = new ccui.Button('shuffle_on.png', 'shuffle.png', 'shuffle.png', ccui.Widget.PLIST_TEXTURE);
+        button.setScale(0.6);
+        button.setPosition(this.centerViewLetters.x, this.centerViewLetters.y);
+
+        button.addClickEventListener(() => {
+            button.setEnabled(false);
+            button.runAction(new cc.FadeTo(0.2, 0));
+            this.shuffleViewLetters();
+            setTimeout(() => {
+                button.runAction(new cc.FadeTo(0.2, 255),
+                button.setEnabled(true))}, 1000);
+        })
+
+        this.addChild(button);
     },
 
     setViewLetterPosition: function(viewLet, angle) {
@@ -218,6 +450,30 @@ let GameScene = cc.Scene.extend({
         animation.setAnimation(0, 'animation', false);
         animation.setPosition(this.width/2, this.height/2);
         this.addChild(animation);
+        cc.audioEngine.playEffect(resources.game_victory_effect, false)
+    },
+
+    addViewCoins: function() {
+        let size = cc.spriteFrameCache.getSpriteFrame('bar_bg.png').getOriginalSize()
+        let coinsBg = new cc.Scale9Sprite('bar_bg.png');
+
+        coinsBg.setCapInsets(new cc.rect(size.width/2 - 1, size.height/2 - 1, 2, 2))
+        coinsBg.setContentSize(200, 80);
+        coinsBg.setPosition(this.width/9, this.height - this.height/15);
+
+        let coins = new cc.Sprite(cc.spriteFrameCache.getSpriteFrame('coin.png'));
+        coins.setPosition(coinsBg.getPositionX() - 80, this.height - this.height/15);
+
+        this.coinsText = new ccui.Text(this.game.coins, resources.marvin_round.name, 35)
+        this.coinsText.setPosition(coinsBg.getPositionX() + 15, coinsBg.getPositionY());
+
+        this.addChild(coinsBg);
+        this.addChild(coins);
+        this.addChild(this.coinsText);
+    },
+
+    onChangeCoins: function() {
+        this.coinsText.setString(this.game.coins);
     }
 
 })
