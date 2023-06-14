@@ -25,6 +25,13 @@ let NodeLetter = cc.Node.extend({
                 new cc.FadeTo(0.3, 255),
             )
         )
+    },
+
+    open: function() {
+        this.showAnimation(this.active.animationBg);
+        this.showAnimation(this.active.animation);
+        this.active.runAction(new cc.ScaleTo(0.3, 0.6));
+
         this.isOpen = true;
     }
 })
@@ -39,14 +46,17 @@ let WordView = cc.Node.extend({
     },
 
     create: function() {
-        let i = 0;
+        let j = 0;
         for(let l of this.word.split('')) {
-            let nodeLetter = new NodeLetter(l);
-            this.arrayNodes.push(nodeLetter);
+            let node = new NodeLetter(l);
+            let size = {x : node.animationBg.width, y: node.animationBg.height};
+            this.arrayNodes.push(node);
 
-            this.addChild(nodeLetter);
+            node.setPosition(this.width + size.x/1.5 * j, this.height);
+
+            this.addChild(node);
+            j += 1;
         }
-        
     },
 
     addLetter : function(letter) {
@@ -59,12 +69,26 @@ let WordView = cc.Node.extend({
     allNodesIsVisible: function() {
         let flag = true;
         for (let node of this.arrayNodes) {
-            console.log(node, node.isOpen)
             if (!node.isOpen) {
                 flag = false;
                 break;
             }
         }
         return flag;
-    }
+    },
+
+    showWord: function() {
+        let i = 1;
+        for(let node of this.arrayNodes) {
+            if (!node.isOpen) {
+                setTimeout(() => {
+                    node.showAnimation(node.active.animationBg);
+                    node.showAnimation(node.active.animation);
+                    setTimeout(() => node.active.runAction(new cc.ScaleTo(0.3, 0.6)), 300)
+                    },
+                70 * i)
+            }
+            i += 1;
+        }
+    },
 })

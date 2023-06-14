@@ -5,8 +5,13 @@ let Game = function() {
     this.foundWords = [];
     this.lengthWords = this.words.map(w => w.length);
 
+    this.viewLetters = [];
+
     this.choiseLetters = [];
     this.viewChoiseLetters = [];
+
+    this.mapViewWords = new Map();
+    this.viewWords = [];
 
     this.coins = 2000;
 
@@ -22,22 +27,36 @@ let Game = function() {
     this.updateShowChoiseLetters = function() {
     };
 
-    
+    this.answerAnimation = function(){
+    };
+}
 
-    this.run();
+Game.prototype.openNode = function() {
+    open:
+    for (let viewWord of this.viewWords) {
+        if (!viewWord.allNodesIsVisible()) {
+            for (let node of viewWord.arrayNodes) {
+                if (!node.isOpen) {
+                    node.open();
+
+                    this.spendCoins(50);
+
+                    if (viewWord.allNodesIsVisible()) {
+                        this.foundWords.push(viewWord.word);
+                    }
+
+                    this.isAllWordsFound()
+
+                    break open;
+                }
+            }
+        }
+    }
 }
 
 Game.prototype.haveCoins = function(price) {
     return this.coins >= price;
 }
-
-Game.prototype.run = function() {
-    this.interval = setInterval(() => this.isAllWordsFound(), 100);
-},
-
-Game.prototype.stop = function() {
-    clearInterval(this.interval)
-},
 
 Game.prototype.spendCoins = function(price) {
     this.coins -= price;
@@ -47,14 +66,8 @@ Game.prototype.spendCoins = function(price) {
 Game.prototype.isAllWordsFound = function() {
     if (this.foundWords.length == this.words.length) {
         setTimeout(() => this.viewVictory(), 500);
-        this.stop();
     }
 }
-
-Game.prototype.readTextFile = function(file) {
-    let fileUtil = cc.fileUtil.getInstance(file);
-    var jData = JSON.parse(data);
-};
 
 Game.prototype.removeChoiseLetters = function() {
     while (this.choiseLetters.length > 0) {
@@ -76,7 +89,6 @@ Game.prototype.removeShowChoiseLetters = function() {
         );
     }
     if (this.viewChoiseLetters.length != 0){
-        console.log(this.viewChoiseLetters);
         this.updateShowChoiseLetters();
     }
 };
@@ -89,22 +101,47 @@ Game.prototype.choiseLetter = function(letView) {
     this.showChoiseLetters(new LetterView(letView.letter));
 };
 
-Game.prototype.makeArrayWords = function(word, minLength) {
-
-    const regex = new RegExp("[^" + `${word}` + "]");
-    words.forEach(testString => {
-        if(!regex.test(testString) && testString.length >= minLength && testString.length <= word.length) {
-            let checkLet = true;
-            testString.split('').forEach(l => {
-                if (testString.split(l).length - 1 != word.split(l).length - 1) {
-                    checkLet = false;
-                    return;
-                }
-            })
-            if (checkLet) this.words.push(testString);
-        }
-    })
+Game.prototype.wordIsFound = function(word) {
+    return this.foundWords.indexOf(word) != -1; 
 };
-Game.prototype.initArrayLetters = function() {
-}
 
+Game.prototype.checkAnswer = function() {
+    let word = '';
+    for(let letView of this.choiseLetters) {
+        word += letView.letter;
+    }
+
+    if (this.wordIsFound(word)) {
+        this.cancelChoiseLetters();
+    }
+    else if (this.words.indexOf(word) != -1) {
+        cc.audioEngine.playEffect(resources.game_right_answer, false)
+        this.answerAnimation('word_right.png');
+        this.mapViewWords.get(word).showWord();
+        this.foundWords.push(word);
+        setTimeout(() => {
+            this.cancelChoiseLetters();
+        }, 500);
+        this.isAllWordsFound()
+    }
+    else {
+        cc.audioEngine.playEffect(resources.game_wrong_answer, false)
+        this.answerAnimation('word_wrong.png');
+        setTimeout(() => {
+            this.cancelChoiseLetters();
+        }, 500);
+    }
+};
+
+Game.prototype.cancelChoiseLetters = function() {
+    this.removeChoiseLetters();
+    this.removeShowChoiseLetters();
+};
+
+Game.prototype.particleCancelChoiseLetters = function(index, viewLet) {
+    while(this.choiseLetters.length > index) {
+        let view = this.choiseLetters.pop();
+        if (view != viewLet)
+            view.makeInactive();
+    }
+};

@@ -36,6 +36,12 @@ let LetterView = cc.Node.extend({
         this.addChild(this.activeAnimation);
     },
 
+    setViewLetterRotation: function() {
+        let arrayRotation = [-5, 0, 5];
+        let indexArrayRotation = Math.floor(Math.random() * 3);
+        this.setRotation(arrayRotation[indexArrayRotation]);
+    },
+
     onclick : function(choiseFunc, removeFunc) {
         this.animationBg.addClickEventListener(function() {
             if (this.active) {
@@ -73,8 +79,11 @@ let LetterView = cc.Node.extend({
     },
 
     hideAction: function(speed) {
-        
         this.animation.runAction(new cc.FadeTo(speed, 0));
         this.animationBg.runAction(new cc.FadeTo(speed, 0));
+    },
+
+    showAction: function() {
+        this.runAction(new cc.ScaleTo(0.4, 0.6));
     }
 });

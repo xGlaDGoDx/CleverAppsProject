@@ -1,6 +1,4 @@
-let resources = {
-    
-    background: 'res/backgrounds/level_bg.jpg',
+let resources = {    
     game_background: 'res/backgrounds/background.jpg',
 
     game_atlas: 'respacked/game.atlas',
